@@ -2,7 +2,7 @@ name: Build unsigned IPA
 
 on:
   push:
-    branches: [master]
+    branches: [master, advertising-persistence-build]
 
 jobs:
   build:

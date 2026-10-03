@@ -1,0 +1,47 @@
+name: Build unsigned IPA
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "16.4"
+
+      # Peertalk is a Carthage dependency (see Cartfile.resolved); the project
+      # links Carthage/Build/Peertalk.xcframework.
+      - name: Install Carthage
+        run: brew install carthage
+
+      - name: Build Carthage dependencies
+        run: carthage bootstrap --use-xcframeworks --platform iOS --cache-builds
+
+      - name: Archive (unsigned)
+        run: |
+          xcodebuild archive \
+            -project midimittr.xcodeproj \
+            -scheme midimittr \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/midimittr.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM=""
+
+      - name: Package IPA
+        run: |
+          mkdir -p build/Payload
+          cp -R build/midimittr.xcarchive/Products/Applications/midimittr.app build/Payload/
+          (cd build && zip -qry midimittr-unsigned.ipa Payload)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: midimittr-unsigned-ipa
+          path: build/midimittr-unsigned.ipa
